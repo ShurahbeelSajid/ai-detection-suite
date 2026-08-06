@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install test dependencies
+        run: python -m pip install -e ".[dev]"
+      - name: Validate all-extras dependency graph
+        shell: bash
+        run: |
+          report="$RUNNER_TEMP/all-extras-report.json"
+          python -m pip install --dry-run --ignore-installed --report "$report" ".[all]"
+          REPORT_PATH="$report" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads(Path(os.environ["REPORT_PATH"]).read_text(encoding="utf-8"))
+          opencv_distributions = {
+              "opencv-contrib-python",
+              "opencv-contrib-python-headless",
+              "opencv-python",
+              "opencv-python-headless",
+          }
+          providers = {
+              item["metadata"]["name"].lower().replace("_", "-")
+              for item in report["install"]
+              if item["metadata"]["name"].lower().replace("_", "-")
+              in opencv_distributions
+          }
+          expected = {"opencv-python", "opencv-contrib-python"}
+          if providers != expected:
+              raise SystemExit(f"unexpected OpenCV providers in all extra: {sorted(providers)}")
+          versions = {
+              item["metadata"]["name"].lower().replace("_", "-"): item["metadata"]["version"]
+              for item in report["install"]
+              if item["metadata"]["name"].lower().replace("_", "-") in expected
+          }
+          if len(set(versions.values())) != 1:
+              raise SystemExit(f"OpenCV provider versions differ: {versions}")
+          PY
+      - name: Compile
+        run: python -m compileall -q ai_detection_suite tests
+      - name: Lint
+        run: ruff check .
+      - name: Security lint
+        run: bandit -q -r ai_detection_suite
+      - name: Test
+        run: pytest
+      - name: Build and smoke-test wheel
+        shell: bash
+        run: |
+          python -m pip wheel --no-deps --wheel-dir dist .
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          wheel = next(Path("dist").glob("*.whl"))
+          with ZipFile(wheel) as archive:
+              names = archive.namelist()
+          required_suffixes = (
+              "ai_detection_suite/models/model-manifest.json",
+              "ai_detection_suite/models/yolo11n.pt",
+              "ai_detection_suite/tools/auto_label_yolo.py",
+              "ai_detection_suite/tools/annotate_from_filename.py",
+              "licenses/LICENSE",
+              "licenses/docs/THIRD_PARTY_NOTICES.md",
+          )
+          missing = [suffix for suffix in required_suffixes if not any(name.endswith(suffix) for name in names)]
+          if missing:
+              raise SystemExit(f"wheel is missing: {missing}")
+          PY
+          python -m pip install --force-reinstall --no-deps dist/*.whl
+          cd "$(mktemp -d)"
+          python -I -c "from ai_detection_suite.model_security import validate_model_path; validate_model_path('yolo11n.pt')"
+          ai-detection --doctor --no-objects > /dev/null
+          ai-detection-auto-label --help > /dev/null
+          ai-detection-label-from-filenames --help > /dev/null
+      - name: Audit installed dependencies
+        run: pip-audit
+
+  windows-launcher:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Run relocated setup
+        shell: powershell
+        run: .\scripts\setup.ps1 -CoreOnly
+      - name: Run relocated launcher diagnostics
+        shell: cmd
+        run: scripts\launch_ai_detection.bat --doctor --no-objects

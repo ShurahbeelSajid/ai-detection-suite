@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.python-version
+
+# Tests, tooling, and builds
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Editors and operating systems
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Runtime output and privacy-sensitive data
+*.log
+logs/
+logs*.txt
+detections*.csv
+runs/
+.cache/
+.deepface/
+
+# Generated datasets/annotations (keep source code and directory markers)
+yolo_dataset/images/
+yolo_dataset/labels/**/*.txt
+yolo_dataset/labels.txt
+yolo_dataset/data.yaml

@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "all-in-one-ai-detection-suite"
+version = "4.0.0"
+description = "Local-first, low-latency webcam face, hand, and object detection"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE", "docs/THIRD_PARTY_NOTICES.md"]
+authors = [{ name = "Engr Saad" }]
+dependencies = [
+  "numpy>=1.26,<3",
+  "opencv-python==4.14.0.94",
+  "packaging>=24,<27",
+]
+
+[project.optional-dependencies]
+objects = [
+  "ultralytics>=8.4.67,<9",
+  "torch>=2.5,<3",
+]
+attributes = [
+  "deepface>=0.0.100,<0.1",
+  "tf-keras>=2.20,<2.22",
+]
+hands = [
+  # MediaPipe requires the contrib distribution. Pin both OpenCV providers to
+  # the identical reviewed build so their shared cv2 namespace cannot diverge.
+  "opencv-contrib-python==4.14.0.94",
+  "mediapipe>=0.10.32,<0.11",
+]
+all = [
+  "ultralytics>=8.4.67,<9",
+  "torch>=2.5,<3",
+  "deepface>=0.0.100,<0.1",
+  "tf-keras>=2.20,<2.22",
+  "opencv-contrib-python==4.14.0.94",
+  "mediapipe>=0.10.32,<0.11",
+]
+dev = [
+  "bandit>=1.8,<2",
+  "pip-audit>=2.9,<3",
+  "pytest>=8,<10",
+  "ruff>=0.12,<1",
+]
+
+[project.scripts]
+ai-detection = "ai_detection_suite.cli:run_cli"
+ai-detection-auto-label = "ai_detection_suite.tools.auto_label_yolo:main"
+ai-detection-label-from-filenames = "ai_detection_suite.tools.annotate_from_filename:main"
+
+[tool.setuptools.packages.find]
+include = ["ai_detection_suite*"]
+
+[tool.setuptools.package-data]
+ai_detection_suite = ["models/*.json", "models/*.pt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-config --strict-markers"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = ["yolo_dataset"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["RUF012", "SIM117"]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]

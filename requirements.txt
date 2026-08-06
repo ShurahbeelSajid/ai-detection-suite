@@ -1,0 +1,2 @@
+# Compatibility install matching the default object-detection setup.
+-e .[objects]
