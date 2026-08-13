@@ -30,7 +30,7 @@ hands = [
   # MediaPipe requires the contrib distribution. Pin both OpenCV providers to
   # the identical reviewed build so their shared cv2 namespace cannot diverge.
   "opencv-contrib-python==4.14.0.94",
-  "mediapipe>=0.10.32,<0.11",
+  "mediapipe>=0.10.32,<1.1",
 ]
 all = [
   "ultralytics>=8.4.67,<9",
@@ -38,7 +38,7 @@ all = [
   "deepface>=0.0.100,<0.1",
   "tf-keras>=2.20,<2.22",
   "opencv-contrib-python==4.14.0.94",
-  "mediapipe>=0.10.32,<0.11",
+  "mediapipe>=0.10.32,<1.1",
 ]
 dev = [
   "bandit>=1.8,<2",
